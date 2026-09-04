@@ -2,11 +2,14 @@ generator client {
   provider             = "prisma-client-py"
   interface            = "sync"
   recursive_type_depth = 5
+  previewFeatures      = ["postgresqlExtensions"]
+  output               = "venv/Lib/site-packages/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model ClientProfile {
@@ -22,4 +25,21 @@ model Briefing {
   createdAt       DateTime      @default(now())
   clientProfileId String
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  citations       Citation[]
+}
+
+model Citation {
+  id            String   @id @default(uuid())
+  url           String
+  publishedDate String?
+  briefingId    String
+  briefing      Briefing @relation(fields: [briefingId], references: [id])
+}
+
+model SearchCache {
+  id             String   @id @default(uuid())
+  query          String
+  queryEmbedding Unsupported("vector")
+  results        Json
+  createdAt      DateTime @default(now())
 }

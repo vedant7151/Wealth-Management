@@ -1,0 +1,25 @@
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "sync"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ClientProfile {
+  id               String     @id @default(uuid())
+  name             String
+  portfolio_themes String[]
+  briefings        Briefing[]
+}
+
+model Briefing {
+  id              String        @id @default(uuid())
+  content         String
+  createdAt       DateTime      @default(now())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+}

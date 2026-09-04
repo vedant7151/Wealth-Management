@@ -1,0 +1,6 @@
+langgraph>=0.1.4
+google-genai>=0.1.0
+tavily-python>=0.3.3
+prisma>=0.15.0
+inngest>=0.3.0
+python-dotenv>=1.0.0

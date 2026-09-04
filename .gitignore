@@ -1,0 +1,26 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Output files
+output.txt
+output.log
+seed.py
+run_seeded.py
+
+# Prisma generated
+*.prisma-*
+
+# VS Code / IDE
+.vscode/
+.idea/

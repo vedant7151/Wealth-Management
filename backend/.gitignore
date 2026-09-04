@@ -24,3 +24,6 @@ run_seeded.py
 # VS Code / IDE
 .vscode/
 .idea/
+
+wealth-agent-spec.md
+wealth-agent-v2-spec.md

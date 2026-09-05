@@ -12,47 +12,48 @@ inngest_client = inngest.Inngest(app_id="wealth-agent")
 )
 async def generate_morning_briefing(ctx: inngest.Context, step: inngest.Step) -> dict:
     
-    # Step 1: Fetch themes from Prisma DB synchronously inside a step wrapper
-    def fetch_themes():
+    def fetch_profiles():
         db = Prisma()
         db.connect()
         profiles = db.clientprofile.find_many()
         db.disconnect()
         
-        # Flatten all themes for the briefing agent, or collect from a specific user
-        all_themes = []
-        for p in profiles:
-            all_themes.extend(p.portfolio_themes)
-            
-        return all_themes
+        return [{"id": p.id, "themes": p.portfolio_themes} for p in profiles]
         
-    themes = await step.run("fetch_portfolio_themes", fetch_themes)
+    profiles = await step.run("fetch_profiles", fetch_profiles)
     
-    # Step 2: Run the LangGraph agent
-    def run_agent():
-        mock_input = {
-            "portfolio_themes": themes,
+    def run_agent(profile):
+        input_state = {
+            "client_id": profile["id"],
+            "portfolio_themes": profile["themes"],
             "queries_to_run": [],
             "gathered_news": "",
             "iteration_count": 0,
-            "final_briefing": ""
+            "revision_count": 0,
+            "final_briefing": "",
+            "final_citations": [],
+            "is_compliant": False,
+            "criticism": ""
         }
         
-        final_state = None
-        for output in app.stream(mock_input):
+        accumulated = input_state.copy()
+        for output in app.stream(input_state):
             for key, value in output.items():
-                print(f"Finished node: {key}")
-                final_state = value
+                print(f"Finished node for {profile['id']}: {key}")
+                if value:
+                    accumulated.update(value)
         
-        return final_state.get("final_briefing", "Failed to generate briefing.")
+        return accumulated.get("final_briefing", "Failed to generate briefing.")
         
-    briefing = await step.run("run_langgraph_agent", run_agent)
+    results = []
+    for p in profiles:
+        briefing = await step.run(f"run_agent_{p['id']}", lambda p=p: run_agent(p))
+        results.append(len(briefing))
     
-    # Normally, you would dispatch an email or save to DB here.
-    return {"status": "success", "briefing_length": len(briefing)}
+    return {"status": "success", "briefings_processed": len(results)}
 
-# Create an ASGI app to serve the Inngest endpoints (e.g. FastAPI / Flask / Tornado etc.)
-# import fastapi
-# from inngest.fast_api import serve
-# api = fastapi.FastAPI()
-# serve(api, inngest_client, [generate_morning_briefing])
+# Create an ASGI app to serve the Inngest endpoints (FastAPI)
+import fastapi
+from inngest.fast_api import serve
+api = fastapi.FastAPI(title="Wealth Agent Webhook Server")
+serve(api, inngest_client, [generate_morning_briefing])

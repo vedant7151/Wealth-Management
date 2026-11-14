@@ -10,6 +10,13 @@ ENV PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1 \
     PRISMA_BINARY_CACHE_DIR=/opt/prisma-cache
 
+# prisma-client-py downloads a prebuilt Node (via nodeenv) to run the Prisma CLI;
+# that Node binary links libatomic, which python:*-slim does not ship. Builder
+# stage only -- the runtime stage copies just the generated client + engine.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # requirements.lock (pip-compile output) pins every TRANSITIVE dependency;
 # used as a constraints file so the image can't drift from what CI tested.
 COPY requirements.txt requirements.lock ./

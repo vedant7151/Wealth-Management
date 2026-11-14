@@ -1,0 +1,101 @@
+{
+  "samples": [
+    {
+      "id": "F01",
+      "context_chunks": [
+        {"url": "https://example.com/a1", "title": "Hyperscaler capex", "content": "Major cloud providers raised capital expenditure guidance for AI infrastructure this quarter, citing strong GPU demand."},
+        {"url": "https://example.com/a2", "title": "Grid strain", "content": "Data center construction tied to AI growth is straining regional power grids, utilities warn of multi-year lead times."}
+      ],
+      "citations": [{"url": "https://example.com/a1"}, {"url": "https://example.com/a2"}],
+      "draft_claims": [
+        {"text": "Cloud providers raised capital expenditure guidance for AI infrastructure this quarter.", "expected_supported": true},
+        {"text": "Utilities have warned of multi-year lead times to add power generation capacity.", "expected_supported": true}
+      ],
+      "notes": "Fully faithful: both citations match context, both claims lift directly from the retrieved text."
+    },
+    {
+      "id": "F02",
+      "context_chunks": [
+        {"url": "https://example.com/b1", "title": "Foundry utilization", "content": "Semiconductor foundry utilization rates improved this quarter as chipmakers worked through excess inventory."}
+      ],
+      "citations": [{"url": "https://example.com/b1"}],
+      "draft_claims": [
+        {"text": "Foundry utilization rates improved this quarter as excess inventory was worked through.", "expected_supported": true}
+      ],
+      "notes": "Fully faithful, single source."
+    },
+    {
+      "id": "F03",
+      "context_chunks": [
+        {"url": "https://example.com/c1", "title": "Central bank holds rates", "content": "The central bank held its benchmark interest rate steady this meeting, citing mixed inflation data."}
+      ],
+      "citations": [{"url": "https://example.com/c1"}, {"url": "https://example.com/not-in-context"}],
+      "draft_claims": [
+        {"text": "The central bank held its benchmark interest rate steady this meeting.", "expected_supported": true}
+      ],
+      "notes": "Bad citation: one cited URL was never part of the retrieved context -- simulates a citation-tracking bug."
+    },
+    {
+      "id": "F04",
+      "context_chunks": [
+        {"url": "https://example.com/d1", "title": "Crude supply concerns", "content": "Crude oil prices climbed this week on renewed supply concerns tied to geopolitical tensions in major energy-producing regions."}
+      ],
+      "citations": [{"url": "https://example.com/d1"}],
+      "draft_claims": [
+        {"text": "Crude oil prices climbed this week on renewed supply concerns.", "expected_supported": true},
+        {"text": "Analysts expect the central bank to cut rates by fifty basis points next month.", "expected_supported": false}
+      ],
+      "notes": "Hallucinated claim: an unrelated rate-cut prediction with zero basis in the retrieved energy-sector context."
+    },
+    {
+      "id": "F05",
+      "context_chunks": [
+        {"url": "https://example.com/e1", "title": "Memory pricing", "content": "Memory chip pricing has stabilized after a prolonged industry slump as manufacturers cut capital spending."},
+        {"url": "https://example.com/e2", "title": "Export controls", "content": "New export control rules on advanced semiconductor equipment are reshaping global chip supply chains."}
+      ],
+      "citations": [{"url": "https://example.com/e1"}, {"url": "https://example.com/e2"}, {"url": "https://example.com/never-retrieved"}],
+      "draft_claims": [
+        {"text": "Memory chip pricing has stabilized after a prolonged industry slump.", "expected_supported": true},
+        {"text": "This particular company is expected to double its market share within a year.", "expected_supported": false}
+      ],
+      "notes": "Both a bad citation AND a hallucinated claim in the same sample -- a worse-case realistic failure mode."
+    },
+    {
+      "id": "F06",
+      "context_chunks": [
+        {"url": "https://example.com/f1", "title": "Refining margins", "content": "Refining margins widened this quarter as tight supply of refined products met steady energy demand."}
+      ],
+      "citations": [{"url": "https://example.com/f1"}],
+      "draft_claims": [
+        {"text": "Refining margins widened this quarter on tight product supply.", "expected_supported": true},
+        {"text": "The company announced a surprise CEO resignation effective immediately.", "expected_supported": false}
+      ],
+      "notes": "Correct citation, but one invented claim with no grounding at all in the retrieved content."
+    },
+    {
+      "id": "F07",
+      "context_chunks": [
+        {"url": "https://example.com/g1", "title": "Renewable additions", "content": "Renewable energy capacity additions accelerated this year as falling equipment costs supported continued build-out of solar and wind generation."},
+        {"url": "https://example.com/g2", "title": "OPEC decisions", "content": "OPEC production decisions continue to weigh on the energy price outlook as the group balances member compliance."}
+      ],
+      "citations": [{"url": "https://example.com/g1"}, {"url": "https://example.com/g2"}],
+      "draft_claims": [
+        {"text": "Renewable capacity additions accelerated this year on falling equipment costs.", "expected_supported": true},
+        {"text": "OPEC production decisions continue to weigh on the energy price outlook.", "expected_supported": true}
+      ],
+      "notes": "Fully faithful, two sources, two grounded claims."
+    },
+    {
+      "id": "F08",
+      "context_chunks": [
+        {"url": "https://example.com/h1", "title": "Auto chip lag", "content": "Automotive semiconductor demand continues to lag the broader chip industry recovery as inventory digestion at auto OEMs takes longer."}
+      ],
+      "citations": [{"url": "https://example.com/wrong-url-entirely"}],
+      "draft_claims": [
+        {"text": "Automotive semiconductor demand continues to lag the broader industry recovery.", "expected_supported": true},
+        {"text": "The briefing's underlying claim is grounded even though its citation points nowhere retrieved.", "expected_supported": false}
+      ],
+      "notes": "Claim is grounded in context, but the ONLY citation given doesn't match any retrieved source -- citation precision and claim support are independent checks, and this sample is designed to show that explicitly (good claim support, zero citation precision). The second 'claim' is a synthetic un-grounded sentence."
+    }
+  ]
+}

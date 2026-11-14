@@ -1,0 +1,41 @@
+# Dependabot version updates. Security updates for the pinned set are separate
+# and automatic once the dependency graph is enabled on the repo.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:
+        update-types: ["minor", "patch"]
+    # requirements.lock is regenerated from requirements*.txt by pip-compile
+    # (see docs/OPERATIONS.md "Updating dependencies"); a Dependabot bump to
+    # requirements.txt must be followed by re-running it.
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Bumps the digest-pinned base images (python, node, nginx) in the Dockerfiles.
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

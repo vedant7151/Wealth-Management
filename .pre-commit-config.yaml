@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: mypy-backend
+        name: mypy (compliance/, api.py, ratelimit.py, llm_client.py)
+        entry: bash -c "cd backend && python -m mypy compliance api.py ratelimit.py llm_client.py"
+        language: system
+        files: ^backend/(compliance/|api\.py|ratelimit\.py|llm_client\.py)
+        pass_filenames: false
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v10.9.0
+    hooks:
+      - id: eslint
+        files: ^frontend/src/.*\.(ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@10.9.0
+          - typescript-eslint@8.67.0

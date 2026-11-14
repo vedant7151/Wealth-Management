@@ -1,0 +1,16 @@
+# Minimal config: ruff's own documented defaults (pyflakes + basic
+# pycodestyle), pinned explicitly so results are stable across ruff
+# versions/environments. Full lint hardening (broader rule set, mypy,
+# pre-commit) is Phase 5 scope -- this file just keeps "ruff (if present)"
+# in Phase 1's checks meaningful rather than noisy on code Phase 5 hasn't
+# touched yet.
+#
+# line-length=120 (not ruff's 88 default) matches this codebase's actual
+# style across every phase so far -- using the 88-char default would mean
+# `ruff format` wants to reformat nearly every existing file the first
+# time it's run, which is a cosmetic mass-diff with no behavior change,
+# not something Phase 5 should do as a side effect of adding CI.
+line-length = 120
+
+[lint]
+select = ["E4", "E7", "E9", "F"]

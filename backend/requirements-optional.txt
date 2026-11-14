@@ -1,0 +1,3 @@
+# Optional extras -- NOT installed in the default image.
+# Sentry error reporting (enabled only when SENTRY_DSN is set; see docs/OPERATIONS.md).
+sentry-sdk==2.75.0

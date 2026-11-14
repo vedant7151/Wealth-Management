@@ -1,0 +1,35 @@
+# Build context = ./frontend.
+
+# Secrets / local config -- VITE_* build values come from Dockerfile ARGs
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# VCS / editor
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+
+# Dependencies and build output are produced inside the image
+node_modules
+dist
+dist-ssr
+.vite
+*.tsbuildinfo
+coverage
+.eslintcache
+*.log
+npm-debug.log*
+
+# Tests are not part of the production bundle
+src/**/*.test.tsx
+src/**/*.test.ts
+src/test
+
+# Docker files themselves
+Dockerfile
+.dockerignore

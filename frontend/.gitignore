@@ -1,3 +1,5 @@
+# frontend/.gitignore
+
 # Logs
 logs
 *.log
@@ -7,16 +9,34 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and build output
 node_modules
 dist
 dist-ssr
+.vite/
+*.tsbuildinfo
+coverage/
+.eslintcache
+.parcel-cache/
 *.local
+
+# Secrets -- VITE_* values are compiled into the public bundle, so only
+# PUBLIC values (e.g. Clerk's publishable key) belong here; still never commit.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Deploy tooling state
+.vercel/
+.netlify/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj

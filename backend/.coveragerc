@@ -1,0 +1,12 @@
+[run]
+omit =
+    tests/*
+    venv/*
+    seed.py
+    run_seeded.py
+    clear_db.py
+    clear_all_except_clients.py
+    scripts/*
+
+[report]
+skip_empty = True

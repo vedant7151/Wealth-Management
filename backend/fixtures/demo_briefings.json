@@ -1,0 +1,32 @@
+[
+  {
+    "source": "frontend/src/data/sample.ts, verbatim (that file documents it as mirroring real agent output; content copied unmodified, no text added or removed)",
+    "content": "# Morning Briefing: Macro View & Portfolio Impact\n\n## Macro View\n* Semiconductor Sector Momentum: Global chip revenues reached $298.5B in Q1, driven by AI data center capex. Trade controls continue to pressure localized supply chains.\n* Clean Power Grid Demands: Clean energy capex accounted for 66% of total global energy expenditures, stimulated by grid demand from high-density data centers.\n\n## Portfolio Impact\n### Semiconductor & Hardware\n* Potential Tailwinds: Sustained enterprise AI demand provides operational momentum for power management and logic suppliers.\n* Potential Risks: Export restrictions and high bond yields pose multiple compression risks for growth-heavy hardware equities.\n\n---\n*CRITICAL: Never make definitive buy, sell, or hold recommendations. Phrase all impacts strictly as potential risks or potential tailwinds based on historical correlations.*",
+    "citations": [
+      {
+        "url": "https://finance.yahoo.com/markets/stocks/articles/nxp-semiconductors-nxpi-laps-stock-221502766.html",
+        "title": "NXP Semiconductors (NXPI) Laps the Stock Market",
+        "publishedDate": "Wed, 02 Sep 2026"
+      },
+      {
+        "url": "https://www.mckinsey.com/industries/semiconductors/our-insights/the-next-era-of-semiconductor-value-creation",
+        "title": "The next era of semiconductor value creation",
+        "publishedDate": "Mon, 30 Mar 2026"
+      },
+      {
+        "url": "https://www.deloitte.com/us/en/insights/industry/technology/technology-media-telecom-outlooks/semiconductor-industry-outlook.html",
+        "title": "Semiconductor Industry Outlook",
+        "publishedDate": "Wed, 04 Feb 2026"
+      }
+    ],
+    "status": "compliant",
+    "complianceViolations": []
+  },
+  {
+    "source": "backend/output.txt, verbatim (a genuine run_seeded.py run against live Gemini/Tavily, saved 2026-09-13; content copied unmodified; no citations were recorded alongside this particular saved run)",
+    "content": "# Morning Briefing: Semiconductor & Supply Chain Analysis\n\n## Macro View\n\nGlobal semiconductor supply chains continue to increase in complexity, with manufacturing operations fragmented across multiple global regions—spanning design centers, wafer fabrication facilities, and final assembly plants. To manage this structural complexity and mitigate delays, logistics providers within the semiconductor space are increasingly integrating artificial intelligence (AI) and predictive analytics for route optimization and demand forecasting. Additionally, rising chip complexity is driving demand for specialized infrastructure, including cleanroom-compatible and cold-chain logistics services.\n\nConcurrently, the semiconductor industry's technological migration toward 3nm and smaller process nodes is driving a 20% to 30% increase in wet chemistry steps per wafer. This operational shift is leading to higher chemical consumption per wafer and accelerating demand for advanced contamination-control materials, such as high-purity PTFE-lined and perfluoroelastomer puncture-resistant stoppers. Furthermore, ongoing regionalization of semiconductor supply chains is prompting new wafer fabrication construction and component qualification campaigns globally.\n\n## Portfolio Impact\n\n* **Semiconductor Logistics & Supply Chain Solutions**\n  * *Potential Tailwind:* Logistics providers offering AI-driven planning, predictive analytics, and specialized cleanroom/cold-chain transport may experience operational tailwinds as global supply chains become more fragmented and reliant on data-driven management.\n\n* **Specialized Materials & Chemical Handling Components**\n  * *Potential Tailwind:* Suppliers of high-purity contamination-control components—such as PTFE-lined and perfluoroelastomer stoppers—may benefit from increased volume demand due to the 20% to 30% surge in wet chemistry steps required for sub-3nm node production and expanding regional fab construction.\n\n* **Logistical & Production Complexity**\n  * *Potential Risk:* The combination of increasingly fragmented multi-location production flows and complex chemical processing requirements introduces potential operational risks if specialized transport capabilities or cleanroom logistics fail to keep pace with fab capacity expansions.",
+    "citations": [],
+    "status": "compliant",
+    "complianceViolations": []
+  }
+]

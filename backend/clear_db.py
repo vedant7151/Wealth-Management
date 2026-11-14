@@ -1,5 +1,6 @@
 from prisma import Prisma
 
+
 def clear():
     db = Prisma()
     db.connect()
@@ -10,6 +11,7 @@ def clear():
         print(f"Error clearing cache: {e}")
     finally:
         db.disconnect()
+
 
 if __name__ == "__main__":
     clear()

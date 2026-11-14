@@ -1,0 +1,27 @@
+# Normalize line endings in the repository to LF, and check out LF on every
+# platform. A CRLF shell script or Dockerfile breaks inside a Linux container
+# (`/bin/sh^M: bad interpreter`), and Windows developers here run with
+# core.autocrlf=true, which otherwise produces CRLF working copies.
+* text=auto eol=lf
+
+*.sh text eol=lf
+Dockerfile* text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Makefile text eol=lf
+*.py text eol=lf
+*.sql text eol=lf
+*.prisma text eol=lf
+*.toml text eol=lf
+
+# Binary files: never diff/merge as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.gz binary

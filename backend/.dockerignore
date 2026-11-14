@@ -1,0 +1,60 @@
+# Build context = ./backend. Keep the context small and secret-free.
+
+# Secrets -- never in an image layer
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+secrets/
+
+# VCS / editor
+.git
+.gitignore
+.gitattributes
+.vscode/
+.idea/
+
+# Python junk and caches
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Not needed at runtime
+tests/
+requirements-dev.txt
+requirements-optional.txt
+pytest.ini
+mypy.ini
+ruff.toml
+scripts/loadtest/
+scripts/verify_ratelimit_pg.py
+wealth-agent-spec.md
+wealth-agent-v2-spec.md
+seed.py
+run_seeded.py
+clear_db.py
+clear_all_except_clients.py
+output.txt
+output.log
+*.log
+*.md
+*.cdx.json
+
+# Docker files themselves
+Dockerfile
+.dockerignore

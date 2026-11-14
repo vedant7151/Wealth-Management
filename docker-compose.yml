@@ -1,0 +1,104 @@
+# Phase 8 packaging. Two ways to run this:
+#
+# 1. Against a real Neon (or any Postgres+pgvector) database you already
+#    have: put its DATABASE_URL (and your API keys) in `backend/.env`,
+#    then run `docker compose up --build` -- only `api` and `web` start.
+#
+# 2. With NO Neon account and NO API keys at all, for a reviewer to see a
+#    working app immediately: run `docker compose --profile local up
+#    --build`. This additionally starts a local Postgres+pgvector `db`
+#    and a Redis instance, plus a one-shot `migrate` service that pushes
+#    the schema and seeds 2 demo clients with real pre-recorded briefings
+#    (see backend/scripts/seed_demo.py). With no GEMINI_API_KEY set,
+#    DEMO_MODE's default ("auto") activates automatically, so clicking
+#    "Run" also works without hitting any live provider -- see
+#    backend/demo_mode.py and docs/DEPLOY.md's "Local, no-Neon quickstart".
+#
+#    `api`/`web` have no hard `depends_on` on `migrate` (a service with a
+#    `profiles:` entry can't be depended on by one without -- that would
+#    break mode 1 above, which never starts `migrate` at all). `api`'s
+#    own entrypoint waits briefly for the database to accept connections,
+#    which covers most of the startup race; if the UI shows an error in
+#    the first few seconds, reload once `migrate` has finished (it logs
+#    "Done" and exits 0).
+
+services:
+  api:
+    build:
+      context: ./backend
+    image: wealth-agent-api:local
+    ports:
+      - "${API_PORT:-8010}:8010"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://wealth:wealth@db:5432/wealth?schema=public}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      DEMO_MODE: ${DEMO_MODE:-auto}
+      REDIS_URL: ${REDIS_URL:-}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8010}
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+    image: wealth-agent-web:local
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ---- local profile: no Neon account / no API keys needed ----
+
+  db:
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+    profiles: ["local"]
+    environment:
+      POSTGRES_USER: wealth
+      POSTGRES_PASSWORD: wealth
+      POSTGRES_DB: wealth
+    ports:
+      - "${LOCAL_DB_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/docker/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wealth -d wealth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
+    profiles: ["local"]
+    ports:
+      - "${LOCAL_REDIS_PORT:-6379}:6379"
+
+  # One-shot: pushes the schema to the fresh local `db` and seeds 2 demo
+  # clients, then exits (status 0). Uses `prisma db push` (not `migrate
+  # deploy`) on purpose: this is a throwaway local volume, and existing
+  # volumes created this way have no `_prisma_migrations` table, which
+  # `migrate deploy` would choke on (see docs/DEPLOY.md). `--accept-data-loss`
+  # is safe ONLY because `db` is a brand-new, empty, disposable local volume;
+  # NEVER pass that flag against a database with real data -- production uses
+  # `prisma migrate deploy` (docs/DEPLOY.md).
+  migrate:
+    build:
+      context: ./backend
+    image: wealth-agent-api:local
+    profiles: ["local"]
+    entrypoint: ["sh", "-c"]
+    command:
+      - "python -m prisma db push --skip-generate --accept-data-loss && python scripts/seed_demo.py"
+    environment:
+      DATABASE_URL: postgresql://wealth:wealth@db:5432/wealth?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

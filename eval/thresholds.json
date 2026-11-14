@@ -1,0 +1,17 @@
+{
+  "_comment": "Regression thresholds for `make eval` / check_thresholds.py. Each value is the real number measured this phase (see eval/results.md) minus/plus a small tolerance, NOT a target or a fabricated ideal. judge_only/combined are intentionally absent: their offline numbers are [MEASURE: run `make eval-live`] this phase (see docs/PROGRESS.md), so there is nothing real to regress against yet -- add them here once a --live run populates eval/fixtures/judge_cache.json.",
+  "measured_at_commit": "1d48790",
+  "rules_only": {
+    "recall_min": 0.95,
+    "precision_min": 0.90,
+    "fpr_max": 0.20
+  },
+  "retrieval": {
+    "recall_at_4_min": 0.35,
+    "mrr_min": 0.70
+  },
+  "faithfulness": {
+    "citation_precision_min": 0.70,
+    "claim_support_recall_min": 0.90
+  }
+}

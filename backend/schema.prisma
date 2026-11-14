@@ -3,7 +3,10 @@ generator client {
   interface            = "sync"
   recursive_type_depth = 5
   previewFeatures      = ["postgresqlExtensions"]
-  output               = "venv/Lib/site-packages/prisma"
+  // No custom `output`: this project runs on the global Python interpreter
+  // (not backend/venv), so the client must generate into the `prisma`
+  // package actually on that interpreter's path -- prisma-client-py's
+  // default behavior -- rather than into an unused venv/ copy.
 }
 
 datasource db {
@@ -16,7 +19,111 @@ model ClientProfile {
   id               String     @id @default(uuid())
   name             String
   portfolio_themes String[]
+  // Nullable placeholder for Clerk auth: null until real Clerk keys are
+  // configured, at which point clients created via the API get scoped to
+  // the creating Clerk user. See backend/api.py's auth dependency.
+  clerkUserId      String?
   briefings        Briefing[]
+  runLogs          RunLog[]
+  holdings         Holding[]
+
+  @@index([clerkUserId])
+}
+
+// One row per holding (replace-on-upload: a CSV upload for a client
+// deletes all its prior rows and inserts the new set inside a single
+// Prisma batch_() transaction -- see backend/holdings.py). researcher_node
+// uses these (when present) to build ticker/sector-aware search queries
+// instead of only the client's broader portfolio_themes.
+model Holding {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  ticker          String
+  sector          String?
+  weight          Float
+  createdAt       DateTime      @default(now())
+
+  @@index([clientProfileId])
+}
+
+// manual: a human clicked "Run morning briefing" via POST /api/clients/{id}/run.
+// cron: the Inngest-scheduled weekday job (backend/scheduler.py).
+// demo: Phase 8's demo-mode fallback -- served instantly from a
+//   pre-recorded real-run fixture instead of calling live providers,
+//   either because DEMO_MODE forces it or because the daily LLM budget
+//   was exhausted at run-creation time (see backend/demo_mode.py).
+enum RunTrigger {
+  manual
+  cron
+  demo
+}
+
+// running: the background thread executing agent.app.stream() hasn't
+//   finished yet (or crashed without updating this row -- see
+//   backend/runs.py's recover_stuck_runs(), which flips a row stuck in
+//   "running" past RUN_TIMEOUT_SECONDS to "failed" on API startup).
+// success: the graph run completed and a Briefing row was saved (whatever
+//   its own BriefingStatus is -- compliant/needs_human_review are both a
+//   successful RUN, just not necessarily a deliverable briefing).
+// failed: the run itself crashed, timed out, or the writer failed with no
+//   Briefing ever saved.
+enum RunStatus {
+  running
+  success
+  failed
+}
+
+// One row per graph run (manual /run call or a cron-triggered client run),
+// independent of whether it succeeds -- lets the UI show a live progress
+// timeline (via the SSE stream keyed by this row's id, used as
+// GraphState.run_id) and a run history list, and lets the scheduler check
+// idempotencyKey before starting a second run for the same client on the
+// same day. nodeTimeline is written once, at completion, from the
+// in-memory event list runs.py accumulates during the run (live progress
+// itself is served from an in-process pub/sub, not read back from this
+// column -- see runs.py's module docstring for that tradeoff).
+model RunLog {
+  id              String        @id @default(uuid())
+  clientProfileId String
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+  userId          String?
+  trigger         RunTrigger
+  status          RunStatus     @default(running)
+  startedAt       DateTime      @default(now())
+  finishedAt      DateTime?
+  durationMs      Int?
+  // [{seq, ts, type, node, reason, stats}, ...] -- ids/counts/node names/
+  // reasons/status only, never full prompts, raw scraped text, or secrets.
+  nodeTimeline    Json?
+  errorCode       String?
+  briefingId      String?
+  // f"{clientProfileId}:{utc_date}" for a cron-triggered run, so a
+  // double-fired cron event for the same client/day is recognized and
+  // skipped instead of generating a second briefing. Null for manual runs
+  // (a human can intentionally run more than once a day).
+  idempotencyKey  String?
+
+  @@index([clientProfileId, startedAt])
+  @@index([idempotencyKey])
+}
+
+// draft: not yet critiqued / mid-revision loop.
+// compliant: rules + judge both passed.
+// needs_human_review: max revisions hit with unresolved violations, OR the
+//   judge was unavailable/malformed after its retry -- NEVER silently
+//   "compliant" in either case (see agent.py's compliance_critic_node).
+// failed: the writer itself failed (e.g. Gemini outage) -- never sent to
+//   the critic at all.
+// approved / rejected: Phase 7's human-in-the-loop action on a
+//   needs_human_review item (not set by this phase).
+enum BriefingStatus {
+  draft
+  compliant
+  needs_human_review
+  failed
+  approved
+  rejected
 }
 
 model Briefing {
@@ -26,20 +133,177 @@ model Briefing {
   clientProfileId String
   clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
   citations       Citation[]
+
+  status               BriefingStatus     @default(draft)
+  // Final merged list of {rule, severity, quote, why, fix} dicts from both
+  // rules.py and judge.py for the revision that was actually saved -- see
+  // compliance_critic_node. Mirrors BriefingRevision.violations for the
+  // final revision, kept on Briefing itself too so a reader doesn't need
+  // to join to BriefingRevision just to see what's currently unresolved.
+  complianceViolations Json?
+  revisionCount        Int                @default(0)
+  // The LangGraph run id (GraphState.run_id) that produced this briefing,
+  // for correlating with structured log lines and (Phase 3+) ApiCallLog.
+  runId                String?
+  revisions            BriefingRevision[]
+  auditLogs            AuditLog[]
+  deliveryLogs         DeliveryLog[]
+
+  // Phase 7 human-in-the-loop fields: who approved/rejected this briefing
+  // and when (PATCH /api/briefings/{id}/approve|reject, owner-only). Only
+  // a Briefing with status=approved may be delivered (PDF/email).
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  // Set only when an advisor approves a briefing that still has unresolved
+  // compliance violations -- a mandatory, audited override reason (also
+  // written verbatim to AuditLog.metadata). Null for a normal approval of
+  // an already-clean (status was already compliant-eligible) briefing.
+  overrideReason String?
+
+  // Phase 8: true for a briefing served from a pre-recorded real-run
+  // fixture (demo mode / quota-exhausted fallback) instead of a live
+  // graph run -- surfaced verbatim in the serialized API response and
+  // rendered as a visible badge in the UI, so a demo briefing is never
+  // mistaken for a real one. Never set by the real graph/save_node.
+  isDemo Boolean @default(false)
+
+  @@index([clientProfileId])
+}
+
+// One row per writer-draft + critic-verdict cycle, so the full revision
+// history (not just the final saved content) survives a run -- previously
+// `criticism` was overwritten every loop and only the last draft was ever
+// persisted. All revisions for a run are written together by save_node
+// once the final Briefing row exists (see agent.py's GraphState.revision_history
+// and docs/PROGRESS.md's Phase 2 decisions for why: BriefingRevision needs
+// a real briefingId, which doesn't exist until the graph's single save step
+// at the very end, so revisions accumulate in GraphState during the run
+// and are flushed to the DB in one batch alongside the Briefing itself).
+model BriefingRevision {
+  id            String   @id @default(uuid())
+  briefingId    String
+  briefing      Briefing @relation(fields: [briefingId], references: [id])
+  revisionIndex Int
+  content       String
+  violations    Json?
+  // e.g. "rules+gemini-3.6-flash" or "rules+judge_unavailable" -- which
+  // detectors actually produced this revision's verdict.
+  criticModel   String?
+  isCompliant   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([briefingId])
+}
+
+// Append-only. briefingId is nullable because some events (e.g. a
+// quarantined chunk during retrieval) happen before any Briefing row
+// exists for the run; userId is nullable because a scheduler/cron-triggered
+// run has no human caller.
+model AuditLog {
+  id         String    @id @default(uuid())
+  userId     String?
+  clientId   String?
+  action     String
+  briefingId String?
+  briefing   Briefing? @relation(fields: [briefingId], references: [id])
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  @@index([briefingId])
+  @@index([clientId])
 }
 
 model Citation {
   id            String   @id @default(uuid())
   url           String
+  title         String?
   publishedDate String?
   briefingId    String
   briefing      Briefing @relation(fields: [briefingId], references: [id])
+
+  @@index([briefingId])
+}
+
+// Backs backend/ratelimit.py's sliding-window counters AND the per-client
+// run concurrency lock (a lock is just a row with key="lock:<clientId>" and
+// no sibling rows -- see ratelimit.py's _PostgresStore.try_lock). Rows are
+// short-lived; ratelimit.py's cleanup_expired() or an operator cron can
+// periodically delete rows older than the longest configured window.
+model RateLimitHit {
+  id  String   @id @default(uuid())
+  key String
+  ts  DateTime @default(now())
+
+  @@index([key, ts])
+}
+
+// One row per external provider call (LLM generate, embedding, Tavily
+// search, the Groq injection classifier) -- backend/llm_client.py writes
+// these, never agent.py/compliance/* directly, so this table is a
+// complete ledger of every outbound API call the graph makes. Backs the
+// real (not estimated) DAILY_LLM_BUDGET check and GET /api/admin/usage.
+// est_tokens/estCostUsd are rough estimates (see backend/model_prices.py's
+// "ESTIMATES" labeling) -- not billing-accurate.
+model ApiCallLog {
+  id          String   @id @default(uuid())
+  // gemini | groq | groq_classifier | tavily | hf_embeddings
+  provider    String
+  model       String?
+  // query_gen | writer | depth_check | compliance_judge | injection_screen
+  // | research_search | embedding
+  purpose     String
+  runId       String?
+  latencyMs   Int
+  // ok | error | malformed | timeout
+  status      String
+  estTokens   Int?
+  estCostUsd  Float?
+  cacheHit    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@index([runId])
 }
 
 model SearchCache {
   id             String   @id @default(uuid())
   query          String
-  queryEmbedding Unsupported("vector")
+  queryEmbedding Unsupported("vector(384)")
   results        Json
   createdAt      DateTime @default(now())
+}
+
+// The actual RAG knowledge base: chunked, embedded article text retrieved
+// via Tavily. researcher_node writes chunks here; retriever_node does
+// top-k pgvector similarity search over this table per portfolio theme to
+// build the writer's grounded context, instead of dumping raw search JSON.
+model DocumentChunk {
+  id            String   @id @default(uuid())
+  url           String
+  title         String?
+  publishedDate String?
+  chunkIndex    Int
+  content       String
+  embedding     Unsupported("vector(384)")
+  createdAt     DateTime @default(now())
+}
+
+// One row per (briefing, recipient) email delivery attempt -- the unique
+// constraint is the idempotency mechanism POST /api/briefings/{id}/deliver
+// relies on: a second delivery request for the same briefing+recipient is
+// detected (unique violation) and reported back as already-sent rather
+// than emailing twice. Email delivery itself is disabled by default
+// (EMAIL_DELIVERY_ENABLED env) -- see backend/delivery.py.
+model DeliveryLog {
+  id           String   @id @default(uuid())
+  briefingId   String
+  briefing     Briefing @relation(fields: [briefingId], references: [id])
+  recipient    String
+  channel      String   @default("email")
+  // sent | failed
+  status       String
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@unique([briefingId, recipient])
 }

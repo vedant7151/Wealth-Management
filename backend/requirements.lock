@@ -1,0 +1,135 @@
+annotated-doc==0.0.6      # via fastapi
+annotated-types==0.8.0    # via pydantic
+anyio==4.16.0             # via google-genai, groq, httpx, httpx2, langsmith, starlette
+ast-serialize==0.13.1     # via mypy
+bidict==0.24.1            # via python-socketio
+blinker==1.9.0            # via flask
+boolean-py==5.0           # via license-expression
+brotli==1.2.1             # via geventhttpclient
+cachecontrol==0.14.4      # via cachecontrol, pip-audit
+certifi==2026.10.23       # via geventhttpclient, httpcore, httpx, requests
+cffi==2.1.1               # via cryptography, gevent
+cfgv==3.5.0               # via pre-commit
+charset-normalizer==3.5.2  # via reportlab, requests
+click==8.5.1              # via flask, prisma, uvicorn
+colorama==0.4.6           # via pytest
+configargparse==1.9.0     # via locust
+coverage==7.17.3          # via pytest-cov
+cryptography==50.0.2      # via google-auth, pyjwt
+cyclonedx-python-lib==11.12.0  # via pip-audit
+defusedxml==0.7.1         # via py-serializable
+distlib==0.4.4            # via virtualenv
+distro==1.9.0             # via google-genai, groq, langsmith
+fastapi==0.136.1          # via -r requirements.txt
+filelock==4.2.10          # via cachecontrol, python-discovery, virtualenv
+flask==3.1.3              # via flask-cors, flask-login, locust
+flask-cors==6.0.5         # via locust
+flask-login==0.6.3        # via locust
+gevent==26.9.0            # via geventhttpclient, locust
+geventhttpclient==2.6.1   # via locust
+google-auth==2.62.2       # via google-genai
+google-genai==2.22.0      # via -r requirements.txt
+greenlet==3.5.6           # via gevent
+groq==0.37.1              # via -r requirements.txt
+h11==0.16.0               # via httpcore, httpcore2, uvicorn, wsproto
+httpcore==1.0.9           # via httpx
+httpcore2==2.16.0         # via httpx2
+httpx==0.28.1             # via -r requirements-dev.txt, google-genai, groq, inngest, langchain-core, langgraph-sdk, prisma, tavily-python
+httpx2==2.16.0            # via langsmith
+identify==2.6.20          # via pre-commit
+idna==3.20                # via anyio, httpx, httpx2, requests
+iniconfig==2.3.1          # via pytest
+inngest==0.5.19           # via -r requirements.txt
+itsdangerous==2.2.0       # via flask
+jcs==0.3.0                # via inngest
+jinja2==3.1.6             # via flask, prisma
+jsonpatch==1.47           # via langchain-core
+jsonpointer==3.12         # via jsonpatch
+langchain-core==1.6.10    # via langgraph, langgraph-checkpoint, langgraph-prebuilt, langgraph-sdk
+langchain-protocol==0.0.21  # via langchain-core, langgraph-sdk
+langgraph==1.2.11         # via -r requirements.txt
+langgraph-checkpoint==4.3.2  # via langgraph, langgraph-prebuilt
+langgraph-prebuilt==1.1.2  # via langgraph
+langgraph-sdk==0.4.14     # via langgraph
+langsmith==0.12.1         # via -r requirements.txt, langchain-core
+librt==0.16.0             # via mypy
+license-expression==30.4.4  # via cyclonedx-python-lib
+locust==2.47.0            # via -r requirements-dev.txt
+markdown-it-py==4.3.0     # via rich
+markupsafe==3.0.4         # via flask, jinja2, werkzeug
+mdurl==0.1.2              # via markdown-it-py
+msgpack==1.2.4            # via cachecontrol, locust
+mypy==2.4.1               # via -r requirements-dev.txt
+mypy-extensions==1.2.0    # via mypy
+nodeenv==1.12.0           # via pre-commit, prisma
+orjson==3.13.0            # via langgraph-sdk, langsmith
+ormsgpack==1.13.1         # via langgraph-checkpoint
+packageurl-python==0.17.6  # via cyclonedx-python-lib
+packaging==26.3           # via langchain-core, langsmith, pip-audit, pip-requirements-parser, pytest, virtualenv
+pathspec==1.1.1           # via mypy
+pillow==13.0.0            # via reportlab
+pip-api==0.0.35           # via pip-audit
+pip-audit==2.10.1         # via -r requirements-dev.txt
+pip-requirements-parser==32.0.1  # via pip-audit
+platformdirs==4.14.5      # via pip-audit, virtualenv
+pluggy==1.7.0             # via pytest, pytest-cov
+pre-commit==4.4.0         # via -r requirements-dev.txt
+prisma==0.15.0            # via -r requirements.txt
+prometheus-client==0.26.0  # via -r requirements.txt
+psutil==7.2.2             # via locust
+psycopg2-binary==2.9.11   # via -r requirements.txt
+py-serializable==2.2.0    # via cyclonedx-python-lib
+pyasn1==0.6.5             # via pyasn1-modules
+pyasn1-modules==0.4.2     # via google-auth
+pycparser==3.12           # via cffi
+pydantic==2.13.3          # via -r requirements.txt, fastapi, google-genai, groq, inngest, langchain-core, langgraph, langsmith, prisma, pydantic-settings
+pydantic-core==2.46.3     # via pydantic
+pydantic-settings==2.16.3  # via -r requirements.txt
+pygments==2.21.0          # via pytest, rich
+pyjwt==2.15.1             # via -r requirements.txt, pyjwt
+pyparsing==3.3.3          # via pip-requirements-parser
+pytest==9.0.3             # via -r requirements-dev.txt, locust, pytest-cov
+pytest-cov==7.1.0         # via -r requirements-dev.txt
+python-discovery==1.9.5   # via virtualenv
+python-dotenv==1.2.4      # via -r requirements.txt, prisma, pydantic-settings
+python-engineio==4.15.1   # via locust, python-socketio
+python-multipart==0.0.27   # via -r requirements.txt
+python-socketio==5.18.1   # via locust
+pywin32==312              # via locust
+pyyaml==6.0.3             # via langchain-core, pre-commit
+pyzmq==27.3.0             # via locust
+redis==8.1.0              # via -r requirements.txt
+regex==2026.11.9          # via tiktoken
+reportlab==5.1.0          # via -r requirements.txt
+requests==2.34.2          # via -r requirements.txt, cachecontrol, google-auth, google-genai, langsmith, locust, pip-audit, python-socketio, requests-toolbelt, tavily-python, tiktoken
+requests-toolbelt==1.0.0  # via langsmith
+rich==15.0.0              # via pip-audit
+ruff==0.17.4              # via -r requirements-dev.txt
+simple-websocket==1.1.0   # via python-engineio
+sniffio==1.3.1            # via google-genai, groq, langsmith
+sortedcontainers==2.4.0   # via cyclonedx-python-lib
+starlette==1.10.0         # via fastapi
+tavily-python==0.8.1      # via -r requirements.txt
+tenacity==9.1.4           # via google-genai, langchain-core
+tiktoken==0.14.0          # via tavily-python
+tomli==2.5.0              # via pip-audit
+tomli-w==1.2.0            # via pip-audit
+tomlkit==0.15.2           # via prisma
+truststore==0.10.5        # via httpcore2, httpx2
+typing-extensions==4.16.0  # via anyio, cyclonedx-python-lib, fastapi, google-genai, groq, httpx2, inngest, langchain-core, langchain-protocol, langsmith, mypy, prisma, pydantic, pydantic-core, pydantic-settings, starlette, typing-inspection
+typing-inspection==0.4.5  # via fastapi, pydantic, pydantic-settings
+urllib3==2.8.0            # via requests
+uuid-utils==0.19.0        # via langchain-core, langsmith
+uvicorn==0.46.0           # via -r requirements.txt
+virtualenv==21.15.6       # via pre-commit
+websocket-client==1.9.2   # via python-socketio
+websockets==16.1.1        # via google-genai, langgraph-sdk, langsmith
+werkzeug==3.1.9           # via flask, flask-cors, flask-login, locust
+wsproto==1.3.2            # via simple-websocket
+xxhash==4.1.0             # via langgraph, langsmith
+zope-event==6.2           # via gevent
+zope-interface==8.7       # via gevent
+zstandard==0.25.0         # via langsmith
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip

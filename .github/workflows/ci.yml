@@ -1,0 +1,245 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "upgrade/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  repo-hygiene:
+    name: repo hygiene (no tracked .env / secrets / oversized files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: no tracked .env* (except *.example), key files, key-shaped strings, files > 5 MB
+        run: python scripts/ci/check_repo_hygiene.py
+      - name: tracked .env guard (belt and braces)
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.example$'; then
+            echo "tracked .env file found"; exit 1
+          fi
+
+  backend:
+    name: backend (ruff, mypy, pytest+coverage)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      MOCK_DB: "1"
+      RATELIMIT_STORE: memory
+      # prisma-client-py's generated client needs *a* syntactically valid
+      # DATABASE_URL at `prisma generate` time even though no test ever
+      # connects to it (MOCK_DB=1 never opens a real Prisma connection).
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.lock
+      # requirements.lock pins every transitive dependency (pip-compile
+      # output); used as a constraints file so CI tests what the image ships.
+      - run: pip install -r requirements-dev.txt -c requirements.lock
+      - run: prisma generate --schema=schema.prisma
+      - name: ruff check
+        run: ruff check .
+      - name: ruff format --check
+        run: ruff format --check .
+      - name: mypy (compliance/, api.py, ratelimit.py, llm_client.py)
+        run: python -m mypy compliance api.py ratelimit.py llm_client.py
+      - name: pytest (offline only -- "live"-marked tests are excluded by pytest.ini's addopts)
+        run: python -m pytest --cov=. --cov-report=term-missing --cov-fail-under=73
+
+  migrations:
+    name: migrations (baseline applies to a fresh pgvector Postgres, no drift vs schema.prisma)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ci"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.lock
+      - run: pip install -r requirements.txt -c requirements.lock
+      - name: apply committed migrations to an empty database
+        run: prisma migrate deploy --schema=schema.prisma
+      - name: schema.prisma must equal the migrated database (exit 2 = drift)
+        run: prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel schema.prisma --exit-code
+
+  eval-offline:
+    name: eval-offline (make eval thresholds)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: eval
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.lock
+      - run: pip install -r ../backend/requirements.txt -c ../backend/requirements.lock
+      # Equivalent to `make eval` -- run directly rather than through make
+      # (no `make` binary assumed on the runner image); fully offline, no
+      # live LLM/Tavily/Groq/HF calls and no secrets required (see
+      # eval/results.md's own commands + docs/PROGRESS.md Phase 4 notes).
+      - run: python build_compliance_set.py
+      - run: python run_compliance_eval.py
+      - run: python retrieval_eval.py
+      - run: python faithfulness_eval.py
+      - run: python generate_results.py
+      - run: python check_thresholds.py
+
+  loadtest-smoke:
+    name: loadtest smoke (mocked agent; abuse controls hold, no 5xx)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      MOCK_DB: "1"
+      RATELIMIT_STORE: memory
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.lock
+      - run: pip install -r requirements-dev.txt -c requirements.lock
+      - run: prisma generate --schema=schema.prisma
+      # The mock server fakes ONLY the database and the agent graph; no live
+      # provider is ever contacted (see scripts/loadtest/mock_server.py).
+      - name: start mocked-agent API
+        run: |
+          python scripts/loadtest/mock_server.py > mock.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8011/healthz && break; sleep 1; done
+      - name: locust, 10s, one abusive identity
+        run: |
+          locust -f scripts/loadtest/locustfile.py --headless -u 12 -r 12 -t 10s \
+            --host http://127.0.0.1:8011 --csv /tmp/lt --only-summary
+      - name: abuse controls held (exactly RUN_LIMIT=3 runs admitted)
+        run: |
+          python - <<'PY'
+          import json
+          c = json.load(open("/tmp/lt_status_counts.json"))
+          admitted = sum(v for k, v in c.items() if k.endswith("/run -> 202"))
+          assert admitted == 3, f"expected exactly 3 admitted runs, got {admitted}: {c}"
+          assert not any(k.endswith("-> 500") or k.endswith("-> 0") for k in c), c
+          print("ok", c)
+          PY
+
+  frontend:
+    name: frontend (lint, tsc, vitest, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npm run test:ci
+      - name: build (production build REQUIRES VITE_API_BASE_URL; a placeholder is fine for CI)
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.example.invalid
+
+  dependency-audit:
+    name: dependency audit (blocking) + SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.lock
+      # Blocking: any known vulnerability in the pinned set fails the build.
+      # (pip-audit has no severity filter; the pinned set was clean when this
+      # was written -- see docs/PRODUCTION_CHECKLIST.md. A vulnerable pin that
+      # genuinely can't be upgraded needs an explicit, dated --ignore-vuln
+      # entry here with the reason, not a `|| true`.)
+      - name: pip-audit (backend/requirements.lock)
+        run: |
+          pip install pip-audit==2.10.1 cyclonedx-bom
+          pip-audit -r backend/requirements.lock --no-deps --disable-pip
+          cyclonedx-py requirements backend/requirements.lock --output-format JSON --output-file sbom-backend.cdx.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      # High/critical fail the build. The remaining moderate findings are the
+      # ESLint toolchain (dev-only; fix needs a breaking major bump) -- see
+      # docs/PRODUCTION_CHECKLIST.md for the documented exception.
+      - name: npm audit (frontend, high+ blocking) + SBOM
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=high
+          npm audit --omit=dev
+          npm sbom --sbom-format cyclonedx --omit dev > ../sbom-frontend.cdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: |
+            sbom-backend.cdx.json
+            sbom-frontend.cdx.json
+
+  docker-build:
+    name: docker build (api + web images) -- non-blocking until Docker is verified
+    runs-on: ubuntu-latest
+    # Deploys use Render/Vercel native builds, so a red image build must not
+    # block a merge until the images have built successfully once.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      # Builds both images exactly as `docker compose build` would locally
+      # (default profile -- api + web only, no local-db/migrate/redis
+      # profile services). No real DATABASE_URL/API keys are available or
+      # needed here: the backend image's build stage only needs a
+      # syntactically valid DATABASE_URL to run `prisma generate`/
+      # `prisma py fetch` (see backend/Dockerfile), and nothing in either
+      # image's build process calls a live LLM/Tavily/HF/Groq API.
+      - name: docker compose build
+        run: docker compose build api web

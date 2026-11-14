@@ -1,0 +1,155 @@
+# Render Blueprint -- NATIVE (non-Docker) Python build. See docs/DEPLOY.md,
+# section "Deploy without Docker", for the click-by-click steps.
+#
+# The Docker files (backend/Dockerfile, docker-compose.yml) are untouched and
+# still work; this blueprint simply doesn't use them, so no Docker daemon is
+# needed anywhere in the deploy path.
+#
+# `sync: false` = Render prompts for the value in the dashboard; this file
+# never carries a secret. The frontend is deployed on Vercel (frontend/vercel.json).
+#
+# Two services, because they are two different ASGI apps:
+#   * wealth-agent-api        -> `api:app`        (the REST API the frontend calls)
+#   * wealth-agent-scheduler  -> `scheduler:api`  (Inngest webhook; fires the 06:00
+#                                                  weekday cron). OPTIONAL: delete it
+#                                                  if you do not want scheduled runs.
+#
+# Prisma on a native runtime: the query-engine binary is fetched at BUILD time
+# into PRISMA_BINARY_CACHE_DIR, which must be inside the project directory so it
+# survives into the runtime (a default ~/.cache location is not guaranteed to).
+# DATABASE_URL must be set before the first build (`prisma generate` reads it).
+services:
+  - type: web
+    name: wealth-agent-api
+    runtime: python
+    rootDir: backend
+    region: oregon
+    plan: starter
+    autoDeployTrigger: "off"
+    healthCheckPath: /healthz
+    buildCommand: >-
+      pip install -r requirements.txt -c requirements.lock
+      && python -m prisma py fetch
+      && python -m prisma generate --schema=schema.prisma
+    startCommand: >-
+      python -m uvicorn api:app --host 0.0.0.0 --port $PORT
+      --workers $WEB_CONCURRENCY
+      --timeout-graceful-shutdown $GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS
+    envVars:
+      # ---- runtime / build ----
+      - key: PYTHON_VERSION
+        value: 3.12.2 # keep equal to .python-version
+      - key: PRISMA_BINARY_CACHE_DIR
+        value: /opt/render/project/src/backend/.prisma-cache
+      - key: APP_ENV
+        value: prod
+      - key: DEBUG
+        value: "false"
+      - key: WEB_CONCURRENCY
+        value: "1" # in-process run lock + SSE pub/sub assume ONE worker/instance
+      - key: GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS
+        value: "25"
+      - key: LOG_LEVEL
+        value: INFO
+      # ---- secrets / per-environment values (set in the dashboard) ----
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY # only if EMBEDDING_PROVIDER=huggingface
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_PROJECT
+        sync: false
+      - key: CLERK_JWKS_URL
+        sync: false
+      - key: CLERK_ISSUER
+        sync: false
+      - key: CLERK_AUTHORIZED_PARTIES
+        sync: false
+      - key: ADMIN_USER_IDS # prod refuses to boot without it
+        sync: false
+      - key: METRICS_TOKEN # prod refuses to boot without it
+        sync: false
+      - key: CORS_ORIGINS # exact https Vercel URL, no trailing slash
+        sync: false
+      # ---- safe defaults ----
+      - key: DEMO_MODE
+        value: "false"
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: RUN_LIMIT
+        value: "3"
+      - key: RUN_WINDOW_SECONDS
+        value: "3600"
+      - key: MAX_CONCURRENT_RUNS
+        value: "4"
+      - key: RETENTION_ENABLED
+        value: "false"
+      - key: EMAIL_DELIVERY_ENABLED
+        value: "false"
+      # Empty is correct on Render: the app's own IP-based identity only matters
+      # for unauthenticated callers; set it only if you add your own proxy.
+      - key: TRUSTED_PROXIES
+        value: ""
+
+  # ---- OPTIONAL: Inngest webhook / cron host ---------------------------------
+  - type: web
+    name: wealth-agent-scheduler
+    runtime: python
+    rootDir: backend
+    region: oregon
+    plan: starter
+    autoDeployTrigger: "off"
+    healthCheckPath: /api/inngest # Inngest's introspection route; any 2xx means up
+    buildCommand: >-
+      pip install -r requirements.txt -c requirements.lock
+      && python -m prisma py fetch
+      && python -m prisma generate --schema=schema.prisma
+    startCommand: python -m uvicorn scheduler:api --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.2
+      - key: PRISMA_BINARY_CACHE_DIR
+        value: /opt/render/project/src/backend/.prisma-cache
+      - key: APP_ENV
+        value: prod
+      - key: DEBUG
+        value: "false"
+      - key: DEMO_MODE
+        value: "false"
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      # Same values as the API service (the scheduler runs the same graph).
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_PROJECT
+        sync: false
+      - key: CLERK_JWKS_URL
+        sync: false
+      - key: CLERK_ISSUER
+        sync: false
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: METRICS_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      # From the Inngest dashboard (Settings -> Keys).
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false

@@ -1,0 +1,34 @@
+# Used only if an image is ever built with the REPO ROOT as context (the
+# compose file and Render use ./backend and ./frontend as contexts, which have
+# their own .dockerignore). Defense in depth: nothing secret or bulky.
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+secrets/
+**/node_modules
+**/venv
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/dist
+docs
+eval
+*.md
+*.log
+output.txt

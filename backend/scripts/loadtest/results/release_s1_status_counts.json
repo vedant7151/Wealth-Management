@@ -1,0 +1,12 @@
+{
+  "GET GET /api/clients -> 200": 19,
+  "GET GET /api/clients -> 429": 267,
+  "GET GET /api/clients/{id}/briefings -> 200": 31,
+  "GET GET /api/clients/{id}/briefings -> 429": 431,
+  "GET GET /api/runs -> 200": 9,
+  "GET GET /api/runs -> 429": 185,
+  "GET GET /healthz -> 200": 65,
+  "POST POST /api/clients/{id}/run -> 202": 3,
+  "POST POST /api/clients/{id}/run -> 409": 30,
+  "POST POST /api/clients/{id}/run -> 429": 924
+}

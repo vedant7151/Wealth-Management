@@ -1,0 +1,6 @@
+{
+  "GET GET /api/clients -> 200": 1239,
+  "GET GET /api/clients/{id}/briefings -> 200": 2172,
+  "GET GET /api/runs -> 200": 817,
+  "GET GET /healthz -> 200": 457
+}

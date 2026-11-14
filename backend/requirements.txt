@@ -4,7 +4,7 @@ tavily-python==0.8.1
 prisma==0.15.0
 inngest==0.5.19
 python-dotenv==1.2.4
-groq==0.37.1
+groq==1.7.0
 langsmith==0.12.1
 psycopg2-binary==2.9.11
 requests==2.34.2

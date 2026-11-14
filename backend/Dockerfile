@@ -2,7 +2,7 @@
 # multi-arch index digest -- matches this project's measured Python
 # version). Refresh deliberately via Dependabot's docker ecosystem. See docs/DEPLOY.md for the full build/run story.
 
-FROM python:3.12.2-slim@sha256:5dc6f84b5e97bfb0c90abfb7c55f3cacc2cb6687c8f920b64a833a2219875997 AS builder
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS builder
 
 WORKDIR /app
 ENV PIP_NO_CACHE_DIR=1 \
@@ -29,7 +29,7 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN python -m prisma py fetch && python -m prisma generate --schema=schema.prisma
 
 
-FROM python:3.12.2-slim@sha256:5dc6f84b5e97bfb0c90abfb7c55f3cacc2cb6687c8f920b64a833a2219875997 AS runtime
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS runtime
 
 # Non-root user -- the app never needs root inside the container.
 RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app --no-create-home app

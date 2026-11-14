@@ -93,7 +93,7 @@ pytest-cov==7.1.0         # via -r requirements-dev.txt
 python-discovery==1.9.5   # via virtualenv
 python-dotenv==1.2.4      # via -r requirements.txt, prisma, pydantic-settings
 python-engineio==4.15.1   # via locust, python-socketio
-python-multipart==0.0.27   # via -r requirements.txt
+python-multipart==0.0.31   # via -r requirements.txt
 python-socketio==5.18.1   # via locust
 pywin32==312              # via locust
 pyyaml==6.0.3             # via langchain-core, pre-commit

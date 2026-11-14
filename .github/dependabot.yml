@@ -7,13 +7,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      python-minor-and-patch:
-        update-types: ["minor", "patch"]
-    # requirements.lock is regenerated from requirements*.txt by pip-compile
-    # (see docs/OPERATIONS.md "Updating dependencies"); a Dependabot bump to
-    # requirements.txt must be followed by re-running it.
+    # Version-update PRs are off for pip: CI installs requirements.txt with
+    # requirements.lock as a CONSTRAINTS file, and Dependabot only edits
+    # requirements.txt, so every such PR conflicted with the lock and failed.
+    # Update by hand (`make lock`) instead. Dependabot SECURITY updates are
+    # separate and still open PRs automatically.
+    open-pull-requests-limit: 0
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -24,6 +23,10 @@ updates:
     groups:
       npm-minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # typescript-eslint supports TypeScript < 6.1 only; TS 7 breaks `npm ci`.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Bumps the digest-pinned base images (python, node, nginx) in the Dockerfiles.
   - package-ecosystem: "docker"

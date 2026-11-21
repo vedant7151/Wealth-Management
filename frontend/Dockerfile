@@ -4,7 +4,7 @@
 # see docs/DEPLOY.md for why that means the API base URL/Clerk key must
 # be passed as --build-arg, not a runtime env var).
 
-FROM node:22.11.0-slim@sha256:f035ba7ffee18f67200e2eb8018e0f13c954ec16338f264940f701997e3c12da AS builder
+FROM node:26.13.1-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS builder
 
 WORKDIR /app
 COPY package.json package-lock.json ./
